@@ -22,9 +22,8 @@ type PythonAPIHw struct {
 }
 
 type PythonAPIHwSpec struct {
-	// Fill me
         Size int32 `json:"size"`
 }
 type PythonAPIHwStatus struct {
-	// Fill me
+        ApiPods []string `json:"apiPods"`
 }

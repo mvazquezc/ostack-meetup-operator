@@ -2,12 +2,14 @@ package stub
 
 import (
 	"context"
+        "fmt"
 	"github.com/mvazquezc/python-api-hw/pkg/apis/ostack/v1alpha1"
-
+        "reflect"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+        "k8s.io/apimachinery/pkg/labels"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
         appsv1 "k8s.io/api/apps/v1"
 )
@@ -55,15 +57,70 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
                                 return err
                         }
                 }
+                // Update Status
+                apiHwStatus, err := getApiHwStatus(helloApiWorld)
+                if err != nil {
+                        logrus.Errorf("Failed to get ApiHwStatus : %v", err)
+                }
+                err = updateApiHwStatus(helloApiWorld, apiHwStatus)
+                if err != nil {
+                        logrus.Errorf("Failed to update status : %v", err)
+                }
 	}
 	return nil
 }
 
+func getLabelsForApiHw(name string) map[string]string {
+        return map[string]string{"app": "api-hello-world", "name": name}
+}
+
+// get the status for our object type
+func getApiHwStatus(h *v1alpha1.PythonAPIHw) (*v1alpha1.PythonAPIHwStatus, error) {
+        pods := &corev1.PodList{
+                TypeMeta: metav1.TypeMeta{
+                        Kind:       "Pod",
+                        APIVersion: "v1",
+                },
+        }
+        sel := getLabelsForApiHw(h.Name)
+	opt := &metav1.ListOptions{LabelSelector: labels.SelectorFromSet(sel).String()}
+	err := sdk.List(h.GetNamespace(), pods, sdk.WithListOptions(opt))
+        if err != nil {
+                logrus.Errorf("Failted to get pods : %v", err)
+                return nil, fmt.Errorf("Failted to get pods : %v", err)
+        }
+        var apiPods []string
+        for _, p := range pods.Items {
+                logrus.Infof("Pod name is %s", p.GetName())
+                if p.Status.Phase != corev1.PodRunning || p.DeletionTimestamp != nil {
+                        logrus.Errorf("Pod %s is terminating, not adding it to pods list", p.GetName()) 
+                } else {
+                        logrus.Infof("Adding pod %s to running pods list", p.GetName())
+                        apiPods = append(apiPods, p.GetName())
+                }
+        }
+        return &v1alpha1.PythonAPIHwStatus{
+                ApiPods: apiPods,
+        }, nil
+}
+
+
+func updateApiHwStatus(h *v1alpha1.PythonAPIHw, status *v1alpha1.PythonAPIHwStatus) error {
+        logrus.Infof("Updating PythonApiHw Status")
+	// don't update the status if there aren't any changes.
+	if reflect.DeepEqual(h.Status, *status) {
+                logrus.Infof("Status has not changed")
+		return nil
+	}
+	h.Status = *status
+        logrus.Infof("Status has changed, we need to update it")
+        err := sdk.Update(h)
+	return err
+}
+
 // serviceForHelloApi returns a Service Object
 func serviceForHelloApi(h *v1alpha1.PythonAPIHw) *corev1.Service {
-        labels := map[string]string{
-                 "app": "api-hello-world",
-        }
+        labels := getLabelsForApiHw(h.Name)
         svc := &corev1.Service{
                 TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -89,9 +146,7 @@ func serviceForHelloApi(h *v1alpha1.PythonAPIHw) *corev1.Service {
 
 // deploymentForHelloApi returns a HelloApi Deployment Object
 func deploymentForHelloApi(h *v1alpha1.PythonAPIHw) *appsv1.Deployment {
-        labels := map[string]string{
-                 "app": "api-hello-world",
-        }
+        labels := getLabelsForApiHw(h.Name)
         replicas := h.Spec.Size
         dep := &appsv1.Deployment{
                 TypeMeta: metav1.TypeMeta{

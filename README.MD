@@ -53,7 +53,6 @@ In this first demo, the etcd operator will be deployed on our OpenShift Cluster.
     $ oc patch etcdclusters example-etcd-cluster -p '{"spec":{"size":5}}' --type='merge'
     $ oc get pods -w
     ```
-
 10. That's it! 
 
 
