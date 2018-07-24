@@ -58,7 +58,7 @@ In this first demo, the etcd operator will be deployed on our OpenShift Cluster.
 
 ### Demo 2 - Build your own operator  ###
 
-In this demo an operator will be created using the Operator Framework SDK. We will be deploying a Python application (quay.io/mavazque/hello-api) that exposes an API that returns "Hello World".
+In this demo an operator will be created using the Operator Framework SDK. We will be deploying a Python application (quay.io/mavazque/hello-api, the application itself is in files folder) that exposes an API that returns "Hello World".
 
 1. Installing the Operator Framework SDK
     ```
