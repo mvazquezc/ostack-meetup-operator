@@ -8,6 +8,13 @@ The environment for these demos is an OpenShift Origin Cluster v3.10 deployed us
 $ oc cluster up --enable=service-catalog,router,registry,web-console,persistent-volumes,rhel-imagestreams,automation-service-broker
 ~~~
 
+At this point you'll need to enable `admin` to have cluster-admin role, hence, execute:
+
+~~~sh
+oc login -u system:admin
+oc adm policy add-cluster-role-to-user cluster-admin admin
+~~~
+
 For the second demo golang and dep must be installed on your computer.
 
 ### Demo 1 - ETCD Operator  ###
